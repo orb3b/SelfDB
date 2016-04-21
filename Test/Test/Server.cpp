@@ -3,6 +3,9 @@
 #include <QDateTime>
 #include <QFile>
 
+#include <time.h>
+#include <stdlib.h>
+
 #include "Console.h"
 #include "Database.h"
 #include "Utilities.h"
@@ -15,6 +18,9 @@ Server::Server() :
 
 void Server::run()
 {
+    /* initialize random seed: */
+    srand(time(NULL));
+
     while (1) {
         // Read a acommand
         Console::writeLine("Input a command...");

@@ -25,6 +25,7 @@ public:
 private:
     void cleanUp();
 
+    QString randomString(int maxSize);
     void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
     void blockWrite(const void *dstBuf, size_t elementSize, size_t count, FILE *fp);
 

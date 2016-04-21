@@ -117,9 +117,6 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    /* initialize random seed: */
-    //srand(time(NULL));
-
     Server server;
     server.run();
 

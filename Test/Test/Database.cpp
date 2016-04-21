@@ -112,17 +112,25 @@ bool Database::generate()
     auto index = 0;
     for (auto i = 0; i < categoriesSize; i++) {
         categoriesData[i].id = i;
-        int circles = i / categoriesExamples.count();
-        int exampleIndex = i % categoriesExamples.count();
+
         QString value;
-        if (circles > 0)
-            value = QString("%1 %2").arg(categoriesExamples.at(exampleIndex).toString()).arg(circles).toLocal8Bit().data();
-        else
-            value = categoriesExamples.at(exampleIndex).toString();
-        if (value.count() < sizeof(categoriesData[i].name) / sizeof(char))
+        int maxSize = sizeof(categoriesData[i].name) / sizeof(char);
+        if (categoriesExamples.count() > 0) {
+            int circles = i / categoriesExamples.count();
+            int exampleIndex = i % categoriesExamples.count();
+
+            if (circles > 0)
+                value = QString("%1 %2").arg(categoriesExamples.at(exampleIndex).toString()).arg(circles).toLocal8Bit().data();
+            else
+                value = categoriesExamples.at(exampleIndex).toString();
+        } else {
+            value = randomString(maxSize - 5);
+        }
+
+        if (value.count() < maxSize)
             strcpy(categoriesData[i].name, value.toLocal8Bit().data());
     }
-    // Write calendar
+    // Write categories
     blockWrite(categoriesData, sizeof(CategoryRow), categoriesSize, fp);
     delete [] categoriesData;
 
@@ -138,6 +146,16 @@ void Database::cleanUp()
 
     m_header = nullptr;
     m_calendar = nullptr;
+}
+
+QString Database::randomString(int maxSize)
+{
+    QString alph = "QWERTYUIOP";
+    QString str;
+    for (auto i = 0; i < maxSize; i++) {
+        str.append(alph[rand() % alph.length()]);
+    }
+    return str;
 }
 
 void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp)
