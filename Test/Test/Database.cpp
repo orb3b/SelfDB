@@ -2,12 +2,14 @@
 
 #include <QString>
 #include <QJsonValue>
+#include <QJsonArray>
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "Calendar.h"
 #include "Console.h"
+#include "Utilities.h"
 
 Database::Database(QJsonObject &config) :
     m_config(config),
@@ -39,7 +41,7 @@ bool Database::load()
 {
     cleanUp();
 
-    QString fileName = m_config["fileName"].toString();
+    QString fileName = m_config["databaseFile"].toString();
 
     auto fp = fopen(fileName.toLocal8Bit().data(), "rb");
     if (!fp) {
@@ -66,9 +68,16 @@ bool Database::load()
 
 bool Database::generate()
 {
-    QString fileName = m_config["fileName"].toString();
-    auto calendarFrom = m_config["generation"].toObject()["calendar"].toObject()["from"].toString();
-    auto calendarTo = m_config["generation"].toObject()["calendar"].toObject()["to"].toString();
+    QString fileName = m_config["databaseFile"].toString();
+
+    auto generationProperties = m_config["generation"].toObject();
+    auto calendarProperties = generationProperties["calendar"].toObject();
+    auto calendarFrom = calendarProperties["from"].toString();
+    auto calendarTo = calendarProperties["to"].toString();
+
+    auto categoriesProperties = generationProperties["categories"].toObject();
+    auto categoriesSize = categoriesProperties["rowCount"].toInt();
+    auto categoriesExamplesFile = categoriesProperties["examples"].toString();
 
     auto fp = fopen(fileName.toLocal8Bit().data(), "wb");
     if (!fp) {
@@ -82,6 +91,7 @@ bool Database::generate()
     // Setup header
     int calendarSize = calendar.daysCount();
     header.calendarSize = calendarSize;
+    header.categoriesSize = categoriesSize;
     // Write header
     fwrite(&header, sizeof(Header), 1, fp);
 
@@ -93,6 +103,28 @@ bool Database::generate()
     // Write calendar
     blockWrite(calendarData, sizeof(CalendarRow), calendarSize, fp);
     delete [] calendarData;
+
+    // Generate categories
+    QJsonArray categoriesExamples;
+    Utilities::loadJson(categoriesExamplesFile, &categoriesExamples);
+
+    CategoryRow *categoriesData = new CategoryRow[calendarSize];
+    auto index = 0;
+    for (auto i = 0; i < categoriesSize; i++) {
+        categoriesData[i].id = i;
+        int circles = i / categoriesExamples.count();
+        int exampleIndex = i % categoriesExamples.count();
+        QString value;
+        if (circles > 0)
+            value = QString("%1 %2").arg(categoriesExamples.at(exampleIndex).toString()).arg(circles).toLocal8Bit().data();
+        else
+            value = categoriesExamples.at(exampleIndex).toString();
+        if (value.count() < sizeof(categoriesData[i].name) / sizeof(char))
+            strcpy(categoriesData[i].name, value.toLocal8Bit().data());
+    }
+    // Write calendar
+    blockWrite(categoriesData, sizeof(CategoryRow), categoriesSize, fp);
+    delete [] categoriesData;
 
     fclose(fp);
 

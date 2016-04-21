@@ -6,6 +6,28 @@
 
 bool Utilities::loadJson(const QString &path, QJsonObject *options)
 {
+    QJsonDocument document;
+    if (!loadJson(path, &document))
+        return false;
+
+    *options = document.object();
+
+    return true;
+}
+
+bool Utilities::loadJson(const QString &path, QJsonArray *options)
+{
+    QJsonDocument document;
+    if (!loadJson(path, &document))
+        return false;
+
+    *options = document.array();
+
+    return true;
+}
+
+bool Utilities::loadJson(const QString &path, QJsonDocument *document)
+{
     QFile file(path);
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -14,9 +36,13 @@ bool Utilities::loadJson(const QString &path, QJsonObject *options)
     }
 
     QByteArray data = file.readAll();
-    QJsonDocument document = QJsonDocument::fromJson(data);
-
-    *options = document.object();
+    QJsonParseError error;
+    *document = QJsonDocument::fromJson(data, &error);
+    if (error.error != QJsonParseError::NoError)
+    {
+        Console::writeLine(QString("Cannot load %1 json. Parse error: %2").arg(path).arg(error.errorString()));
+        return false;
+    }
 
     return true;
 }

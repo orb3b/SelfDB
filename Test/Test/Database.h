@@ -8,6 +8,7 @@
 
 struct Header {
     int calendarSize;
+    int categoriesSize;
 };
 
 class Database

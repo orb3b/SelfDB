@@ -10,4 +10,9 @@ struct CalendarRow {
     qint64 timestamp;
 };
 
+struct CategoryRow {
+    uint id;
+    char name[40];
+};
+
 #endif // SCHEMA_H
