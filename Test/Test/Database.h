@@ -24,7 +24,8 @@ public:
 private:
     void cleanUp();
 
-    static void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
+    void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
+    void blockWrite(const void *dstBuf, size_t elementSize, size_t count, FILE *fp);
 
     QJsonObject &m_config;
 

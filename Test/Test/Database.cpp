@@ -91,7 +91,7 @@ bool Database::generate()
         calendarData[i] = calendar.next();
     }
     // Write calendar
-    fwrite(calendarData, sizeof(CalendarRow), calendarSize, fp);
+    blockWrite(calendarData, sizeof(CalendarRow), calendarSize, fp);
     delete [] calendarData;
 
     fclose(fp);
@@ -110,7 +110,7 @@ void Database::cleanUp()
 
 void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp)
 {
-    auto blockSize = 100;
+    auto blockSize = m_config["bufferSize"].toInt();
 
     size_t size = elementSize * count;
     size_t offset = 0;
@@ -122,6 +122,25 @@ void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *f
             amount = size - offset;
         }
         fread((char *)dstBuf + offset, amount, 1, fp);
+
+        offset += amount;
+    }
+}
+
+void Database::blockWrite(const void *dstBuf, size_t elementSize, size_t count, FILE *fp)
+{
+    auto blockSize = m_config["bufferSize"].toInt();
+
+    size_t size = elementSize * count;
+    size_t offset = 0;
+    while(offset < size) {
+        size_t amount = 0;
+        if (offset + blockSize < size) {
+            amount = blockSize;
+        } else {
+            amount = size - offset;
+        }
+        fwrite((char *)dstBuf + offset, amount, 1, fp);
 
         offset += amount;
     }
