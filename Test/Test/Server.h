@@ -6,6 +6,8 @@
 #include <QJsonValue>
 #include <QString>
 
+#include "Database.h"
+
 class Server
 {
 public:
@@ -14,9 +16,11 @@ public:
     void run();
 
 private:
-    void generateCommand(const QStringList &args);
-
+    void runCommand(const QString &command, const QStringList &args);
     bool loadJson(const QString &path, QJsonObject *options);
+
+    QJsonObject m_config;
+    Database m_db;
 };
 
 #endif // SERVER_H

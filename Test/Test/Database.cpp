@@ -9,7 +9,8 @@
 #include "Calendar.h"
 #include "Console.h"
 
-Database::Database() :
+Database::Database(QJsonObject &config) :
+    m_config(config),
     m_header(nullptr),
     m_calendar(nullptr)
 {
@@ -34,13 +35,13 @@ void Database::print()
     }
 }
 
-bool Database::load(const QJsonObject &options)
+bool Database::load()
 {
     cleanUp();
 
-    auto fileName = "data.bin";
+    QString fileName = m_config["fileName"].toString();
 
-    auto fp = fopen(fileName, "rb");
+    auto fp = fopen(fileName.toLocal8Bit().data(), "rb");
     if (!fp) {
         Console::writeLine(QString("Cannot open %1 for reading!").arg(fileName));
         return false;
@@ -63,11 +64,11 @@ bool Database::load(const QJsonObject &options)
     return true;
 }
 
-bool Database::generate(const QJsonObject &options)
+bool Database::generate()
 {
-    QString fileName = options["fileName"].toString();
-    auto calendarFrom = options["calendar"].toObject()["from"].toString();
-    auto calendarTo = options["calendar"].toObject()["to"].toString();
+    QString fileName = m_config["fileName"].toString();
+    auto calendarFrom = m_config["generation"].toObject()["calendar"].toObject()["from"].toString();
+    auto calendarTo = m_config["generation"].toObject()["calendar"].toObject()["to"].toString();
 
     auto fp = fopen(fileName.toLocal8Bit().data(), "wb");
     if (!fp) {

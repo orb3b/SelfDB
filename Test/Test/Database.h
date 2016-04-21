@@ -13,18 +13,20 @@ struct Header {
 class Database
 {
 public:
-    Database();
+    Database(QJsonObject &config);
     ~Database();
 
     void print();
 
-    bool load(const QJsonObject &options);
-    static bool generate(const QJsonObject &options);
+    bool load();
+    bool generate();
 
 private:
     void cleanUp();
 
     static void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
+
+    QJsonObject &m_config;
 
     Header *m_header;
     CalendarRow *m_calendar;

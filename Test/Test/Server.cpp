@@ -6,14 +6,14 @@
 #include "Console.h"
 #include "Database.h"
 
-Server::Server()
+Server::Server() :
+    m_db(m_config)
 {
 
 }
 
 void Server::run()
 {
-    Database db;
     while (1) {
         // Read a acommand
         Console::writeLine("Input a command...");
@@ -28,35 +28,35 @@ void Server::run()
         if (command == "exit") {
             break;
         }
-        if (command == "generate") {
-            generateCommand(args);
-        }
-        if (command == "load") {
-            db.load(QJsonObject());
-        }
-        if (command == "print") {
-            db.print();
-        }
+
+        runCommand(command, args);
 
         // Print benchmark results
         qint64 timeEnd = QDateTime::currentMSecsSinceEpoch();
         Console::writeLine();
-        Console::writeLine(QString("Time elapsed: %1").arg(timeEnd - timeStart));
+        Console::writeLine(QString("Time elapsed: %1ms").arg(timeEnd - timeStart));
         Console::writeLine();
     }
 }
 
-void Server::generateCommand(const QStringList &args)
+void Server::runCommand(const QString &command, const QStringList &args)
 {
-    QString fileName = args.length() > 1 ? args[1] : "generate.json";
-
-    QJsonObject options;
-    if (!loadJson(fileName, &options))
+    // Update config
+    if (!loadJson("config.json", &m_config))
     {
+        Console::writeLine("Cannot load config");
         return;
     }
 
-    Database::generate(options);
+    if (command == "generate") {
+        m_db.generate();
+    }
+    if (command == "load") {
+        m_db.load();
+    }
+    if (command == "print") {
+        m_db.print();
+    }
 }
 
 bool Server::loadJson(const QString &path, QJsonObject *options)
