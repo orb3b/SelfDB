@@ -1,16 +1,14 @@
-#include <QCoreApplication>
-
 #include <time.h>
 #include <iostream>
 #include <set>
 #include <stdlib.h>
+#include <conio.h>
 #include <QDateTime>
-#include <QThread>
 
 using namespace std;
 
-const char* FILE_NAME = "data.bin";
-const int SIZE = 100000000;
+const char* FILE_NAME = "data50m.bin";
+const int SIZE = 50000000;
 const int BUFFER_SIZE = 1000000;
 
 struct Row {
@@ -65,9 +63,9 @@ bool generate(int size)
     }
 
     char* categories[] = {
-                            "Бакалея, сахар, соль",
-                            "Консервы"
-                       };
+        "Бакалея, сахар, соль",
+        "Консервы"
+    };
 
     auto blocksCount = SIZE / BUFFER_SIZE;
     if (SIZE % BUFFER_SIZE != 0) {
@@ -82,7 +80,7 @@ bool generate(int size)
         }
         fwrite(array, sizeof(Row), BUFFER_SIZE, fp);
     }
-    delete [] array;
+    delete[] array;
 
     fclose(fp);
 
@@ -120,7 +118,7 @@ void writeLine(time_t val)
 int main(int argc, char *argv[])
 {
     /* initialize random seed: */
-    srand (time(NULL));
+    srand(time(NULL));
 
     // Run
 //    if (!generate(SIZE))
@@ -134,38 +132,44 @@ int main(int argc, char *argv[])
     if (!db.load())
         return 2;
 
-//    // set some initial values:
-//    int r = rand() * rand();
-//    for (int i = 1; i <= 1000000; i++) {
-//        myset.insert(val);
-//    }
+    //    // set some initial values:
+    //    int r = rand() * rand();
+    //    for (int i = 1; i <= 1000000; i++) {
+    //        myset.insert(val);
+    //    }
 
-//    for (it = myset.begin(); it != myset.end(); it++) {
-//        cout << *it << ' ';
-//    }
+    //    for (it = myset.begin(); it != myset.end(); it++) {
+    //        cout << *it << ' ';
+    //    }
 
     auto r = 18765;
     printf("Random number: %i\n", r);
 
     // Bench start
-    qint64 elapsed = 0;
-    qint64 t_start = QDateTime::currentMSecsSinceEpoch();
+    long long elapsed = 0;
+    long long t_start = QDateTime::currentMSecsSinceEpoch();
 
-    cout << "Searching value..." << endl;
-    auto count = 0;
-    for (auto i = 0; i < SIZE; i++) {
-        if (strcmp(db.at(i)->category, "Консервы") == 0) {
-            count++;
-        }
-    }
-    //QThread::sleep(1);
+//    cout << "Searching value..." << endl;
+//    auto count1 = 0;
+//    auto count2 = 0;
+//    for (auto i = 0; i < SIZE; i++) {
+//        if (strcmp(db.at(i)->category, "Консервы") == 0) {
+//            count1++;
+//        } else {
+//            count2++;
+//        }
+//    }
+
     // Bench end
-    qint64 t_end = QDateTime::currentMSecsSinceEpoch();
+    long long t_end = QDateTime::currentMSecsSinceEpoch();
     elapsed = t_end - t_start;
 
-    printf("Count: %i\n", count);
+    printf("Count Консервы: %i\n", count1);
+    printf("Count Бакалея, сахар, соль: %i\n", count2);
 
     printf("Elapsed time: %i\n", elapsed);
 
     return 0;
 }
+
+
