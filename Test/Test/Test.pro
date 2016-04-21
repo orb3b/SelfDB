@@ -13,11 +13,13 @@ SOURCES += main.cpp \
     Database.cpp \
     Calendar.cpp \
     Console.cpp \
-    Server.cpp
+    Server.cpp \
+    Utilities.cpp
 
 HEADERS += \
     Database.h \
     Calendar.h \
     Schema.h \
     Console.h \
-    Server.h
+    Server.h \
+    Utilities.h

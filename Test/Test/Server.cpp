@@ -5,6 +5,7 @@
 
 #include "Console.h"
 #include "Database.h"
+#include "Utilities.h"
 
 Server::Server() :
     m_db(m_config)
@@ -42,7 +43,7 @@ void Server::run()
 void Server::runCommand(const QString &command, const QStringList &args)
 {
     // Update config
-    if (!loadJson("config.json", &m_config))
+    if (!Utilities::loadJson("config.json", &m_config))
     {
         Console::writeLine("Cannot load config");
         return;
@@ -57,21 +58,4 @@ void Server::runCommand(const QString &command, const QStringList &args)
     if (command == "print") {
         m_db.print();
     }
-}
-
-bool Server::loadJson(const QString &path, QJsonObject *options)
-{
-    QFile file(path);
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        Console::writeLine(QString("Cannot open %1 json for reading").arg(path));
-        return false;
-    }
-
-    QByteArray data = file.readAll();
-    QJsonDocument document = QJsonDocument::fromJson(data);
-
-    *options = document.object();
-
-    return true;
 }
