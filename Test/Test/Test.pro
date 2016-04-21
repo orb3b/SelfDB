@@ -9,4 +9,15 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    Database.cpp \
+    Calendar.cpp \
+    Console.cpp \
+    Server.cpp
+
+HEADERS += \
+    Database.h \
+    Calendar.h \
+    Schema.h \
+    Console.h \
+    Server.h
