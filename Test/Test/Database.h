@@ -27,6 +27,16 @@ struct CalendarGrouping {
     double avg() { return count != 0 ? sum / count : 0; }
 };
 
+struct Grouping {
+    QString category;
+    QList<qint64> keys;
+    qint64 minKey;
+    qint64 maxKey;
+    double sum;
+    qint64 count;
+    double avg() { return count != 0 ? sum / count : 0; }
+};
+
 typedef QString (*RandomStringFunc)();
 
 class Database
@@ -49,7 +59,11 @@ private:
     void cleanUp();
 
     void runQuery2(int start, int end, QList<CalendarGrouping> *groupings);
+    void runQuery3(int start, int end, QList<Grouping> *groupings);
     void insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings);
+    void insertGrouping(const Grouping &grouping, QList<Grouping> &groupings);
+    bool findInCalendar(qint64 timestamp, CalendarRow *result, int start = -1, int end = -1);
+    static int compareDates(const void *a, const void *b);
 
     QString randomString(int maxSize);
     static QString randomString(const QString &prefix, const QString &alph, int length);
