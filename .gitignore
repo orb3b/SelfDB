@@ -1,6 +1,8 @@
 # Custom ignores
 dist
 Testx64
+measure_all_in_one.xlsx
+~$measure_all_in_one.xlsx
 
 #ignore thumbnails created by windows
 Thumbs.db

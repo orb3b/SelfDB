@@ -20,6 +20,8 @@ struct CalendarGrouping {
     int year;
     int month;
     QList<qint64> timestamps;
+    qint64 minTimestamp;
+    qint64 maxTimestamp;
     double sum;
     qint64 count;
     double avg() { return count != 0 ? sum / count : 0; }
@@ -46,7 +48,7 @@ public:
 private:
     void cleanUp();
 
-    void runQuery(int start, int end, QList<CalendarGrouping> *groupings);
+    void runQuery2(int start, int end, QList<CalendarGrouping> *groupings);
     void insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings);
 
     QString randomString(int maxSize);

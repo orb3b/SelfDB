@@ -37,6 +37,16 @@ Database::~Database()
 
 void Database::query()
 {
+
+}
+
+void Database::query1()
+{
+
+}
+
+void Database::query2()
+{
     auto threadCount = m_config["threadCount"].toInt();
 
     QFutureSynchronizer<void> synchronizer;
@@ -60,7 +70,7 @@ void Database::query()
 
         QList<CalendarGrouping> *lg = new QList<CalendarGrouping>();
         listOfGroupings.append(lg);
-        synchronizer.addFuture(QtConcurrent::run(this, &Database::runQuery,
+        synchronizer.addFuture(QtConcurrent::run(this, &Database::runQuery2,
                                                  start,
                                                  end,
                                                  lg
@@ -102,7 +112,7 @@ void Database::query()
     }
 }
 
-void Database::runQuery(int start, int end, QList<CalendarGrouping> *groupings)
+void Database::runQuery2(int start, int end, QList<CalendarGrouping> *groupings)
 {
     // Group by and sort years
     for (auto i = 0; i < m_header->calendarSize; i++) {
@@ -129,10 +139,38 @@ void Database::runQuery(int start, int end, QList<CalendarGrouping> *groupings)
         }
     }
 
+    for (auto j = 0; j < groupings->length(); j++) {
+        CalendarGrouping &grouping = (*groupings)[j];
+        grouping.minTimestamp = -1;
+        grouping.maxTimestamp = -1;
+        foreach (auto timestamp, grouping.timestamps) {
+            // Get min
+            if (grouping.minTimestamp < 0) {
+                grouping.minTimestamp = timestamp;
+            }
+
+            if (timestamp < grouping.minTimestamp)
+                grouping.minTimestamp = timestamp;
+
+            // Get max
+            if (grouping.maxTimestamp < 0) {
+                grouping.maxTimestamp = timestamp;
+            }
+
+            if (timestamp > grouping.maxTimestamp)
+                grouping.maxTimestamp = timestamp;
+        }
+    }
+
+    // Main cycle
     for (auto i = start; i < end; i++) {
         auto fact = m_facts[i];
         for (auto j = 0; j < groupings->length(); j++) {
             CalendarGrouping &grouping = (*groupings)[j];
+
+            if (fact.timestamp < grouping.minTimestamp ||
+                fact.timestamp > grouping.maxTimestamp)
+                continue;
 
             auto found = false;
             foreach (auto timestamp, grouping.timestamps) {
@@ -150,59 +188,6 @@ void Database::runQuery(int start, int end, QList<CalendarGrouping> *groupings)
             }
         }
     }
-}
-
-void Database::query1()
-{
-    QList<CalendarGrouping> groupings;
-    for (auto i = 0; i < m_header->factsSize; i++) {
-        auto fact = m_facts[i];
-        for (auto i = 0; i < m_header->calendarSize; i++) {
-            auto date = m_calendar[i];
-            // Link by a key
-            if (date.timestamp != fact.timestamp) {
-                continue;
-            }
-
-            // Date found
-            auto groupingFound = false;
-            for (auto j = 0; j < groupings.length(); j++) {
-                CalendarGrouping &grouping = groupings[j];
-                if (grouping.month == date.month &&
-                    grouping.year == date.year) {
-
-                    // Do grouping
-                    grouping.sum += fact.totalPrice;
-                    grouping.count++;
-
-                    groupingFound = true;
-                    break;
-                }
-            }
-
-            if (!groupingFound) {
-                CalendarGrouping grouping;
-                grouping.month = date.month;
-                grouping.year = date.year;
-
-                // Do grouping
-                grouping.sum = fact.totalPrice;
-                grouping.count = 1;
-
-                insertGrouping(grouping, groupings);
-            }
-        }
-    }
-
-    // Show result
-    foreach (auto grouping, groupings) {
-        Console::writeLine(QString("%1 %2 %3").arg(grouping.year).arg(grouping.month).arg(grouping.avg()));
-    }
-}
-
-void Database::query2()
-{
-
 }
 
 void Database::query3()
