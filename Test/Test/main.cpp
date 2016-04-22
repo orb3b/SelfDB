@@ -1,3 +1,5 @@
+#include <QCoreApplication>
+
 #include "Server.h"
 
 using namespace std;
@@ -117,10 +119,8 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    Server server;
-    server.run();
-
-    return 0;
+    Server server(argc, argv);
+    return server.exec();
 }
 //    // Run
 ////    if (!generate(SIZE))

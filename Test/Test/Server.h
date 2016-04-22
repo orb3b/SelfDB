@@ -1,15 +1,20 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <QCoreApplication>
 #include <QString>
 
 #include "Database.h"
 
-class Server
+class Server : QCoreApplication
 {
+    Q_OBJECT
 public:
-    Server();
+    Server(int argc, char *argv[]);
 
+    int exec();
+
+private slots:
     void run();
 
 private:

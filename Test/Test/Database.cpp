@@ -3,6 +3,9 @@
 #include <QString>
 #include <QJsonValue>
 #include <QJsonArray>
+#include <QFuture>
+#include <QFutureSynchronizer>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -177,62 +180,34 @@ bool Database::generate()
     Console::writeLine("Writing sub-categories...");
     blockWrite(subCategoriesData, sizeof(SubCategoryRow), subCategoriesSize, fp);
 
-    // Generate product names
-    Console::writeLine("Generating product names...");
+    // Generate product names and sales checks
+    Console::writeLine("Generating product names and sales checks...");
+
     ProductNameRow *productNamesData = new ProductNameRow[productNamesSize];
     memset(productNamesData, 0, productNamesSize * sizeof(ProductNameRow));
 
-    for (auto i = 0; i < productNamesSize; i++) {
-        productNamesData[i].id = i;
-
-        QString value;
-        while (1) {
-            value = randomString("Name ", "1234567890", 30);
-            auto found = false;
-            for (auto j = 0; j < productNamesSize; j++) {
-                if (value == productNamesData[j].name) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-                break;
-        }
-        int maxSize = sizeof(productNamesData[i].name) / sizeof(char);
-        if (value.count() < maxSize)
-            strcpy(productNamesData[i].name, value.toLocal8Bit().data());
-    }
-    // Write categories
-    Console::writeLine("Writing product names...");
-    blockWrite(productNamesData, sizeof(SubCategoryRow), productNamesSize, fp);
-
-    // Generate sales checks
-    Console::writeLine("Generating sales checks...");
     SalesCheckRow *salesChecksData = new SalesCheckRow[salesChecksSize];
     memset(salesChecksData, 0, salesChecksSize * sizeof(SalesCheckRow));
 
-    for (auto i = 0; i < salesChecksSize; i++) {
-        salesChecksData[i].id = i;
+    QFutureSynchronizer<void> synchronizer;
 
-        QString value;
-        while (1) {
-            value = randomString("#", "1234567890ABCD", 30);
-            auto found = false;
-            for (auto j = 0; j < salesChecksSize; j++) {
-                if (value == salesChecksData[j].name) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-                break;
-        }
-        int maxSize = sizeof(salesChecksData[i].name) / sizeof(char);
-        if (value.count() < maxSize)
-            strcpy(salesChecksData[i].name, value.toLocal8Bit().data());
-    }
-    // Write sales checks
-    Console::writeLine("Writing sales checks...");
+    synchronizer.addFuture(QtConcurrent::run(Database::generateProductNames<ProductNameRow>,
+                                             productNamesData,
+                                             productNamesSize,
+                                             []{ return Database::randomString("Name ", "1234567890", 30); })
+                          );
+
+    synchronizer.addFuture(QtConcurrent::run(Database::generateProductNames<SalesCheckRow>,
+                                             salesChecksData,
+                                             salesChecksSize,
+                                             []{ return Database::randomString("#", "123567890", 30); })
+                          );
+
+    synchronizer.waitForFinished();
+
+    // Write product names and sales checks
+    Console::writeLine("Writing product names and sales checks...");
+    blockWrite(productNamesData, sizeof(SubCategoryRow), productNamesSize, fp);
     blockWrite(salesChecksData, sizeof(SalesCheckRow), salesChecksSize, fp);
 
     // Cleanup
@@ -276,6 +251,31 @@ QString Database::randomString(const QString &prefix, const QString &alph, int l
         result.append(alph[rand() % alph.length()]);
     }
     return result;
+}
+
+template<typename T>
+void Database::generateProductNames(T *data, int size, RandomStringFunc generator)
+{
+    for (auto i = 0; i < size; i++) {
+        data[i].id = i;
+
+        QString value;
+        while (1) {
+            value = generator();
+            auto found = false;
+            for (auto j = 0; j < size; j++) {
+                if (value == data[j].name) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                break;
+        }
+        int maxSize = sizeof(data[i].name) / sizeof(char);
+        if (value.count() < maxSize)
+            strcpy(data[i].name, value.toLocal8Bit().data());
+    }
 }
 
 void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp)

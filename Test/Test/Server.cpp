@@ -5,15 +5,22 @@
 
 #include <time.h>
 #include <stdlib.h>
+#include <QCoreApplication>
 
 #include "Console.h"
 #include "Database.h"
 #include "Utilities.h"
 
-Server::Server() :
+Server::Server(int argc, char *argv[]) :
+    QCoreApplication(argc, argv),
     m_db(m_config)
-{
+{    
+}
 
+int Server::exec()
+{
+    QMetaObject::invokeMethod(this, "run", Qt::QueuedConnection);
+    return QCoreApplication::exec();
 }
 
 void Server::run()
@@ -44,6 +51,8 @@ void Server::run()
         Console::writeLine(QString("Time elapsed: %1ms").arg(timeEnd - timeStart));
         Console::writeLine();
     }
+
+    quit();
 }
 
 void Server::runCommand(const QString &command, const QStringList &args)
