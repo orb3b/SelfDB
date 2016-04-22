@@ -11,7 +11,7 @@ struct Header {
     int categoriesSize;
     int subCategoriesSize;
     int productNamesSize;
-    int saleChecksSize;
+    int salesChecksSize;
     int factsSize;
 };
 
@@ -37,6 +37,9 @@ private:
     template<typename T>
     static void generateProductNames(T *data, int size, RandomStringFunc generator);
 
+    template<typename T>
+    void readData(T **data, int size, FILE *fp);
+
     void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
     void blockWrite(const void *dstBuf, size_t elementSize, size_t count, FILE *fp);
 
@@ -44,6 +47,11 @@ private:
 
     Header *m_header;
     CalendarRow *m_calendar;
+    CategoryRow *m_categories;
+    SubCategoryRow *m_subCategories;
+    ProductNameRow *m_productNames;
+    SalesCheckRow *m_salesChecks;
+    FactRow *m_facts;
 };
 
 #endif // DATABASE_H

@@ -17,7 +17,12 @@
 Database::Database(QJsonObject &config) :
     m_config(config),
     m_header(nullptr),
-    m_calendar(nullptr)
+    m_calendar(nullptr),
+    m_categories(nullptr),
+    m_subCategories(nullptr),
+    m_productNames(nullptr),
+    m_salesChecks(nullptr),
+    m_facts(nullptr)
 {
 
 }
@@ -61,8 +66,23 @@ bool Database::load()
         return false;
     }
 
-    m_calendar = new CalendarRow[m_header->calendarSize];
-    Database::blockRead(m_calendar, sizeof(CalendarRow), m_header->calendarSize, fp);
+    Console::writeLine("Reading calendar...");
+    readData(&m_calendar, m_header->calendarSize, fp);
+
+    Console::writeLine("Reading categories...");
+    readData(&m_categories, m_header->categoriesSize, fp);
+
+    Console::writeLine("Reading sub-categories...");
+    readData(&m_subCategories, m_header->subCategoriesSize, fp);
+
+    Console::writeLine("Reading product names...");
+    readData(&m_productNames, m_header->productNamesSize, fp);
+
+    Console::writeLine("Reading sales checks...");
+    readData(&m_salesChecks, m_header->salesChecksSize, fp);
+
+    Console::writeLine("Reading facts...");
+    readData(&m_facts, m_header->factsSize, fp);
 
     fclose(fp);
 
@@ -111,6 +131,7 @@ bool Database::generate()
     header.categoriesSize = categoriesSize;
     header.subCategoriesSize = subCategoriesSize;
     header.productNamesSize = productNamesSize;
+    header.salesChecksSize = salesChecksSize;
     header.factsSize = factsSize;
     // Write header
     fwrite(&header, sizeof(Header), 1, fp);
@@ -272,9 +293,18 @@ void Database::cleanUp()
 {
     delete m_header;
     delete [] m_calendar;
+    delete [] m_categories;
+    delete [] m_subCategories;
+    delete [] m_productNames;
+    delete [] m_salesChecks;
+    delete [] m_facts;
 
     m_header = nullptr;
     m_calendar = nullptr;
+    m_subCategories = nullptr;
+    m_productNames = nullptr;
+    m_salesChecks = nullptr;
+    m_facts = nullptr;
 }
 
 QString Database::randomString(int length)
@@ -320,6 +350,13 @@ void Database::generateProductNames(T *data, int size, RandomStringFunc generato
         if (value.count() < maxSize)
             strcpy(data[i].name, value.toLocal8Bit().data());
     }
+}
+
+template<typename T>
+void Database::readData(T **data, int size, FILE *fp)
+{
+    *data = new T[size];
+    Database::blockRead(*data, sizeof(T), size, fp);
 }
 
 void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp)
