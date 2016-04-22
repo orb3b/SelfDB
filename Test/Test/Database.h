@@ -12,6 +12,7 @@ struct Header {
     int subCategoriesSize;
     int productNamesSize;
     int saleChecksSize;
+    int factsSize;
 };
 
 typedef QString (*RandomStringFunc)();

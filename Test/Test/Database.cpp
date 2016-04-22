@@ -72,6 +72,7 @@ bool Database::load()
 bool Database::generate()
 {
     QString fileName = m_config["databaseFile"].toString();
+    auto bufferSize = m_config["bufferSize"].toInt();
 
     auto generationProperties = m_config["generation"].toObject();
     auto calendarProperties = generationProperties["calendar"].toObject();
@@ -92,6 +93,9 @@ bool Database::generate()
     auto salesChecksProperties = generationProperties["salesChecks"].toObject();
     auto salesChecksSize = salesChecksProperties["rowCount"].toInt();
 
+    auto factsProperties = generationProperties["facts"].toObject();
+    auto factsSize = factsProperties["rowCount"].toInt();
+
     auto fp = fopen(fileName.toLocal8Bit().data(), "wb");
     if (!fp) {
         Console::writeLine(QString("Cannot open %1 for writing!").arg(fileName));
@@ -107,6 +111,7 @@ bool Database::generate()
     header.categoriesSize = categoriesSize;
     header.subCategoriesSize = subCategoriesSize;
     header.productNamesSize = productNamesSize;
+    header.factsSize = factsSize;
     // Write header
     fwrite(&header, sizeof(Header), 1, fp);
 
@@ -209,6 +214,45 @@ bool Database::generate()
     Console::writeLine("Writing product names and sales checks...");
     blockWrite(productNamesData, sizeof(SubCategoryRow), productNamesSize, fp);
     blockWrite(salesChecksData, sizeof(SalesCheckRow), salesChecksSize, fp);
+
+    // Generate facts
+    Console::writeLine("Generating and writing facts...");
+
+    size_t blockSize = bufferSize / sizeof(FactRow);
+    FactRow *facts = new FactRow[blockSize];
+    memset(facts, 0, sizeof(FactRow) * blockSize);
+
+    size_t sizeWritten = 0;
+    while (sizeWritten < factsSize) {
+        size_t amount = 0;
+        if (sizeWritten + blockSize < factsSize) {
+            amount = blockSize;
+        } else {
+            amount = factsSize - sizeWritten;
+        }
+
+        for (auto i = 0; i < amount; i++) {
+            FactRow fact;
+            memset(&fact, 0, sizeof(FactRow));
+
+            fact.amount = rand();
+            fact.price = (double) rand() + (double) rand() / RAND_MAX;
+            fact.discount = (double) rand() / RAND_MAX;
+            fact.totalPrice = fact.price * fact.amount * (1 - fact.discount);
+
+            fact.timestamp = calendarData[rand() % calendarSize].timestamp;
+            fact.id_category = categoriesData[rand() % categoriesSize].id;
+            fact.id_subCategory = subCategoriesData[rand() % subCategoriesSize].id;
+            fact.id_productName = productNamesData[rand() % productNamesSize].id;
+            fact.id_category = salesChecksData[rand() % salesChecksSize].id;
+
+            facts[i] = fact;
+        }
+        fwrite(facts, sizeof(FactRow), amount, fp);
+
+        sizeWritten += amount;
+    }
+    delete [] facts;
 
     // Cleanup
     delete [] calendarData;

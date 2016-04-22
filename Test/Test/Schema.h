@@ -30,4 +30,16 @@ struct SalesCheckRow {
     char name[40];
 };
 
+struct FactRow {
+    int amount;
+    double price;
+    double discount;
+    double totalPrice;
+    qint64 timestamp;
+    int id_category;
+    int id_subCategory;
+    int id_productName;
+    int id_salesCheck;
+};
+
 #endif // SCHEMA_H
