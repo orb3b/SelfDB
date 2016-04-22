@@ -46,6 +46,7 @@ public:
 private:
     void cleanUp();
 
+    void runQuery(int start, int end, QList<CalendarGrouping> *groupings);
     void insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings);
 
     QString randomString(int maxSize);
