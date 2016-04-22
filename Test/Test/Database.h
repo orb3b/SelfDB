@@ -3,6 +3,7 @@
 
 #include <QtGlobal>
 #include <QJsonObject>
+#include <QList>
 
 #include "Schema.h"
 
@@ -15,6 +16,15 @@ struct Header {
     int factsSize;
 };
 
+struct CalendarGrouping {
+    int year;
+    int month;
+    QList<qint64> timestamps;
+    double sum;
+    qint64 count;
+    double avg() { return count != 0 ? sum / count : 0; }
+};
+
 typedef QString (*RandomStringFunc)();
 
 class Database
@@ -23,6 +33,11 @@ public:
     Database(QJsonObject &config);
     ~Database();
 
+    void query();
+    void query1();
+    void query2();
+    void query3();
+
     void print();
 
     bool load();
@@ -30,6 +45,8 @@ public:
 
 private:
     void cleanUp();
+
+    void insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings);
 
     QString randomString(int maxSize);
     static QString randomString(const QString &prefix, const QString &alph, int length);

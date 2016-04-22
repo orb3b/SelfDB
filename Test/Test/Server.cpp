@@ -64,13 +64,25 @@ void Server::runCommand(const QString &command, const QStringList &args)
         return;
     }
 
-    if (command == "generate") {
-        m_db.generate();
+    if (command == "query") {
+        m_db.query();
+    }
+    if (command == "query1") {
+        m_db.query1();
+    }
+    if (command == "query2") {
+        m_db.query2();
+    }
+    if (command == "query3") {
+        m_db.query3();
+    }
+    if (command == "print") {
+        m_db.print();
     }
     if (command == "load") {
         m_db.load();
     }
-    if (command == "print") {
-        m_db.print();
+    if (command == "generate") {
+        m_db.generate();
     }
 }

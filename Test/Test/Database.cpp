@@ -9,10 +9,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <list>
 
 #include "Calendar.h"
 #include "Console.h"
 #include "Utilities.h"
+
+using namespace std;
 
 Database::Database(QJsonObject &config) :
     m_config(config),
@@ -30,6 +33,120 @@ Database::Database(QJsonObject &config) :
 Database::~Database()
 {
     cleanUp();
+}
+
+void Database::query()
+{
+    QList<CalendarGrouping> groupings;
+    // Group by and sort years
+    for (auto i = 0; i < m_header->calendarSize; i++) {
+        auto row = m_calendar[i];
+
+        auto found = false;
+        for (auto j = 0; j < groupings.length(); j++) {
+            CalendarGrouping &grouping = groupings[j];
+            if (grouping.month == row.month &&
+                grouping.year == row.year) {
+                grouping.timestamps.append(row.timestamp);
+                found = true;
+            }
+        }
+        if (!found) {
+            CalendarGrouping grouping;
+            grouping.month = row.month;
+            grouping.year = row.year;
+            grouping.timestamps.append(row.timestamp);
+            grouping.count = 0;
+            grouping.sum = 0;
+
+            insertGrouping(grouping, groupings);
+        }
+    }
+
+    for (auto i = 0; i < m_header->factsSize; i++) {
+        auto fact = m_facts[i];
+        for (auto j = 0; j < groupings.length(); j++) {
+            CalendarGrouping &grouping = groupings[j];
+
+            auto found = false;
+            foreach (auto timestamp, grouping.timestamps) {
+                if (timestamp == fact.timestamp) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                // Do grouping
+                grouping.sum += fact.totalPrice;
+                grouping.count++;
+                break;
+            }
+        }
+    }
+
+    // Show result
+    foreach (auto grouping, groupings) {
+        Console::writeLine(QString("%1 %2 %3").arg(grouping.year).arg(grouping.month).arg(grouping.avg()));
+    }
+}
+
+void Database::query1()
+{
+    QList<CalendarGrouping> groupings;
+    for (auto i = 0; i < m_header->factsSize; i++) {
+        auto fact = m_facts[i];
+        for (auto i = 0; i < m_header->calendarSize; i++) {
+            auto date = m_calendar[i];
+            // Link by a key
+            if (date.timestamp != fact.timestamp) {
+                continue;
+            }
+
+            // Date found
+            auto groupingFound = false;
+            for (auto j = 0; j < groupings.length(); j++) {
+                CalendarGrouping &grouping = groupings[j];
+                if (grouping.month == date.month &&
+                    grouping.year == date.year) {
+
+                    // Do grouping
+                    grouping.sum += fact.totalPrice;
+                    grouping.count++;
+
+                    groupingFound = true;
+                    break;
+                }
+            }
+
+            if (!groupingFound) {
+                CalendarGrouping grouping;
+                grouping.month = date.month;
+                grouping.year = date.year;
+
+                // Do grouping
+                grouping.sum = fact.totalPrice;
+                grouping.count = 1;
+
+                insertGrouping(grouping, groupings);
+            }
+        }
+    }
+
+    // Show result
+    foreach (auto grouping, groupings) {
+        Console::writeLine(QString("%1 %2 %3").arg(grouping.year).arg(grouping.month).arg(grouping.avg()));
+    }
+}
+
+void Database::query2()
+{
+
+}
+
+void Database::query3()
+{
+
 }
 
 void Database::print()
@@ -256,8 +373,8 @@ bool Database::generate()
             FactRow fact;
             memset(&fact, 0, sizeof(FactRow));
 
-            fact.amount = rand();
-            fact.price = (double) rand() + (double) rand() / RAND_MAX;
+            fact.amount = rand() % 100;
+            fact.price = (double) (rand() % 10000) + (double) rand() / RAND_MAX;
             fact.discount = (double) rand() / RAND_MAX;
             fact.totalPrice = fact.price * fact.amount * (1 - fact.discount);
 
@@ -305,6 +422,33 @@ void Database::cleanUp()
     m_productNames = nullptr;
     m_salesChecks = nullptr;
     m_facts = nullptr;
+}
+
+void Database::insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings)
+{
+    auto inserted = false;
+    for (auto j = 0; j < groupings.length(); j++) {
+        if (grouping.year > groupings[j].year)
+            continue;
+        else if (grouping.year < groupings[j].year) {
+            groupings.insert(j, grouping);
+            inserted = true;
+        } else {
+            // Equal by year
+            if (grouping.month > groupings[j].month) {
+                continue;
+            } else {
+                groupings.insert(j, grouping);
+                inserted = true;
+            }
+        }
+
+        if (inserted)
+            break;
+    }
+
+    if (!inserted)
+        groupings.append(grouping);
 }
 
 QString Database::randomString(int length)
