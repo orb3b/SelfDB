@@ -79,6 +79,16 @@ bool Database::generate()
     auto categoriesSize = categoriesProperties["rowCount"].toInt();
     auto categoriesExamplesFile = categoriesProperties["examples"].toString();
 
+    auto subCategoriesProperties = generationProperties["subCategories"].toObject();
+    auto subCategoriesSize = subCategoriesProperties["rowCount"].toInt();
+    auto subCategoriesExamplesFile = subCategoriesProperties["examples"].toString();
+
+    auto productNamesProperties = generationProperties["productNames"].toObject();
+    auto productNamesSize = productNamesProperties["rowCount"].toInt();
+
+    auto salesChecksProperties = generationProperties["salesChecks"].toObject();
+    auto salesChecksSize = salesChecksProperties["rowCount"].toInt();
+
     auto fp = fopen(fileName.toLocal8Bit().data(), "wb");
     if (!fp) {
         Console::writeLine(QString("Cannot open %1 for writing!").arg(fileName));
@@ -92,24 +102,27 @@ bool Database::generate()
     int calendarSize = calendar.daysCount();
     header.calendarSize = calendarSize;
     header.categoriesSize = categoriesSize;
+    header.subCategoriesSize = subCategoriesSize;
+    header.productNamesSize = productNamesSize;
     // Write header
     fwrite(&header, sizeof(Header), 1, fp);
 
     // Generate calendar
+    Console::writeLine("Generating calendar...");
     CalendarRow *calendarData = new CalendarRow[calendarSize];
     for (auto i = 0; i < calendarSize; i++) {
         calendarData[i] = calendar.next();
     }
     // Write calendar
+    Console::writeLine("Writing calendar...");
     blockWrite(calendarData, sizeof(CalendarRow), calendarSize, fp);
-    delete [] calendarData;
 
     // Generate categories
+    Console::writeLine("Generating categories...");
     QJsonArray categoriesExamples;
     Utilities::loadJson(categoriesExamplesFile, &categoriesExamples);
 
-    CategoryRow *categoriesData = new CategoryRow[calendarSize];
-    auto index = 0;
+    CategoryRow *categoriesData = new CategoryRow[categoriesSize];
     for (auto i = 0; i < categoriesSize; i++) {
         categoriesData[i].id = i;
 
@@ -131,10 +144,107 @@ bool Database::generate()
             strcpy(categoriesData[i].name, value.toLocal8Bit().data());
     }
     // Write categories
+    Console::writeLine("Writing categories...");
     blockWrite(categoriesData, sizeof(CategoryRow), categoriesSize, fp);
+
+    // Generate sub-categories
+    Console::writeLine("Generating sub-categories...");
+    QJsonArray subCategoriesExamples;
+    Utilities::loadJson(subCategoriesExamplesFile, &subCategoriesExamples);
+
+    SubCategoryRow *subCategoriesData = new SubCategoryRow[subCategoriesSize];
+    for (auto i = 0; i < subCategoriesSize; i++) {
+        subCategoriesData[i].id = i;
+
+        QString value;
+        int maxSize = sizeof(subCategoriesData[i].name) / sizeof(char);
+        if (subCategoriesExamples.count() > 0) {
+            int circles = i / subCategoriesExamples.count();
+            int exampleIndex = i % subCategoriesExamples.count();
+
+            if (circles > 0)
+                value = QString("%1 %2").arg(subCategoriesExamples.at(exampleIndex).toString()).arg(circles).toLocal8Bit().data();
+            else
+                value = subCategoriesExamples.at(exampleIndex).toString();
+        } else {
+            value = randomString(maxSize - 5);
+        }
+
+        if (value.count() < maxSize)
+            strcpy(subCategoriesData[i].name, value.toLocal8Bit().data());
+    }
+    // Write sub-categories
+    Console::writeLine("Writing sub-categories...");
+    blockWrite(subCategoriesData, sizeof(SubCategoryRow), subCategoriesSize, fp);
+
+    // Generate product names
+    Console::writeLine("Generating product names...");
+    ProductNameRow *productNamesData = new ProductNameRow[productNamesSize];
+    memset(productNamesData, 0, productNamesSize * sizeof(ProductNameRow));
+
+    for (auto i = 0; i < productNamesSize; i++) {
+        productNamesData[i].id = i;
+
+        QString value;
+        while (1) {
+            value = randomString("Name ", "1234567890", 30);
+            auto found = false;
+            for (auto j = 0; j < productNamesSize; j++) {
+                if (value == productNamesData[j].name) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                break;
+        }
+        int maxSize = sizeof(productNamesData[i].name) / sizeof(char);
+        if (value.count() < maxSize)
+            strcpy(productNamesData[i].name, value.toLocal8Bit().data());
+    }
+    // Write categories
+    Console::writeLine("Writing product names...");
+    blockWrite(productNamesData, sizeof(SubCategoryRow), productNamesSize, fp);
+
+    // Generate sales checks
+    Console::writeLine("Generating sales checks...");
+    SalesCheckRow *salesChecksData = new SalesCheckRow[salesChecksSize];
+    memset(salesChecksData, 0, salesChecksSize * sizeof(SalesCheckRow));
+
+    for (auto i = 0; i < salesChecksSize; i++) {
+        salesChecksData[i].id = i;
+
+        QString value;
+        while (1) {
+            value = randomString("#", "1234567890ABCD", 30);
+            auto found = false;
+            for (auto j = 0; j < salesChecksSize; j++) {
+                if (value == salesChecksData[j].name) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                break;
+        }
+        int maxSize = sizeof(salesChecksData[i].name) / sizeof(char);
+        if (value.count() < maxSize)
+            strcpy(salesChecksData[i].name, value.toLocal8Bit().data());
+    }
+    // Write sales checks
+    Console::writeLine("Writing sales checks...");
+    blockWrite(salesChecksData, sizeof(SalesCheckRow), salesChecksSize, fp);
+
+    // Cleanup
+    delete [] calendarData;
     delete [] categoriesData;
+    delete [] subCategoriesData;
+    delete [] productNamesData;
+    delete [] salesChecksData;
 
     fclose(fp);
+
+    Console::writeLine("Done");
 
     return true;
 }
@@ -148,14 +258,24 @@ void Database::cleanUp()
     m_calendar = nullptr;
 }
 
-QString Database::randomString(int maxSize)
+QString Database::randomString(int length)
 {
     QString alph = "QWERTYUIOP";
     QString str;
-    for (auto i = 0; i < maxSize; i++) {
+    for (auto i = 0; i < length; i++) {
         str.append(alph[rand() % alph.length()]);
     }
     return str;
+}
+
+QString Database::randomString(const QString &prefix, const QString &alph, int length)
+{
+    QString result = prefix;
+    auto offset = prefix.length();
+    for (auto i = offset; i < length;  i++) {
+        result.append(alph[rand() % alph.length()]);
+    }
+    return result;
 }
 
 void Database::blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp)

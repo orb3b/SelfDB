@@ -9,6 +9,9 @@
 struct Header {
     int calendarSize;
     int categoriesSize;
+    int subCategoriesSize;
+    int productNamesSize;
+    int saleChecksSize;
 };
 
 class Database
@@ -26,6 +29,7 @@ private:
     void cleanUp();
 
     QString randomString(int maxSize);
+    QString randomString(const QString &prefix, const QString &alph, int length);
     void blockRead(void *dstBuf, size_t elementSize, size_t count, FILE *fp);
     void blockWrite(const void *dstBuf, size_t elementSize, size_t count, FILE *fp);
 
