@@ -37,120 +37,12 @@ Database::~Database()
 
 void Database::query()
 {
-    auto threadCount = m_config["threadCount"].toInt();
-
-    QFutureSynchronizer<void> synchronizer;
-
-    QList<QList<Grouping>*> listOfGroupings;
-
-    auto blockSize = m_header->factsSize / threadCount;
-    auto start = 0;
-    auto end = 0;
-    for (auto i = 0; i < threadCount; i++) {
-        start = end;
-        auto amount = blockSize;
-        if (i == threadCount - 1) {
-            if (m_header->factsSize % 2 != 0)
-            {
-                amount = blockSize + 1;
-                continue;
-            }
-        }
-        end = start + amount;
-
-        QList<Grouping> *lg = new QList<Grouping>();
-        listOfGroupings.append(lg);
-        synchronizer.addFuture(QtConcurrent::run(this, &Database::runQuery3,
-                                                 start,
-                                                 end,
-                                                 lg
-                                                 )
-                               );
-    }
-
-    synchronizer.waitForFinished();
-
-    // Show result
-    QList<Grouping> result;
-    for (auto i = 0; i < threadCount; i++) {
-        QList<Grouping> &groupingList = *(listOfGroupings[i]);
-        foreach (auto grouping, groupingList) {
-            auto found = false;
-            for (auto j = 0; j < result.length(); j++) {
-                Grouping &resultGrouping = result[j];
-                if (resultGrouping.category == grouping.category) {
-
-                    resultGrouping.count += grouping.count;
-                    resultGrouping.sum += grouping.sum;
-
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                insertGrouping(grouping, result);
-            }
-        }
-    }
-    foreach (auto lg, listOfGroupings) {
-        delete lg;
-    }
-
-    foreach (auto grouping, result) {
-        Console::writeLine(QString("%1 %2").arg(grouping.category).arg(grouping.avg()));
-    }
 }
 
-void Database::runQuery3(int start, int end, QList<Grouping> *groupings)
+void Database::query1()
 {
-    // Group by categories
-    for (auto i = 0; i < m_header->categoriesSize; i++) {
-        auto row = m_categories[i];
-
-        auto found = false;
-        for (auto j = 0; j < groupings->length(); j++) {
-            Grouping &grouping = (*groupings)[j];
-            if (grouping.category == row.name) {
-                grouping.keys.append(row.id);
-                found = true;
-            }
-        }
-        if (!found) {
-            Grouping grouping;
-            grouping.category = row.name;
-            grouping.keys.append(row.id);
-            grouping.count = 0;
-            grouping.sum = 0;
-
-            insertGrouping(grouping, *groupings);
-        }
-    }
-
-    for (auto j = 0; j < groupings->length(); j++) {
-        Grouping &grouping = (*groupings)[j];
-        grouping.minKey = -1;
-        grouping.maxKey = -1;
-        foreach (auto key, grouping.keys) {
-            // Get min
-            if (grouping.minKey < 0) {
-                grouping.minKey = key;
-            }
-
-            if (key < grouping.minKey)
-                grouping.minKey = key;
-
-            // Get max
-            if (grouping.maxKey < 0) {
-                grouping.maxKey = key;
-            }
-
-            if (key > grouping.maxKey)
-                grouping.maxKey = key;
-        }
-    }
-
-    // Main cycle
-    for (auto i = start; i < end; i++) {
+    auto found = false;
+    for (auto i = 0; i < m_header->factsSize; i++) {
         auto fact = m_facts[i];
 
         CalendarRow date;
@@ -160,34 +52,13 @@ void Database::runQuery3(int start, int end, QList<Grouping> *groupings)
         if (date.year != 2020)
             continue;
 
-        for (auto j = 0; j < groupings->length(); j++) {
-            Grouping &grouping = (*groupings)[j];
-
-            if (fact.id_category < grouping.minKey ||
-                fact.id_category > grouping.maxKey)
-                continue;
-
-            auto found = false;
-            foreach (auto key, grouping.keys) {
-                if (key == fact.id_category) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found) {
-                // Do grouping
-                grouping.sum += fact.totalPrice;
-                grouping.count++;
-                break;
-            }
+        if (fact.id_subCategory == 48 && fact.id_category == 14)
+        {
+            found = true;
+            break;
         }
     }
-}
-
-void Database::query1()
-{
-
+    Console::writeLine(QString("Found: %1").arg(found));
 }
 
 void Database::query2()
@@ -337,7 +208,259 @@ void Database::runQuery2(int start, int end, QList<CalendarGrouping> *groupings)
 
 void Database::query3()
 {
+    auto threadCount = m_config["threadCount"].toInt();
 
+    QFutureSynchronizer<void> synchronizer;
+
+    QList<QList<Grouping>*> listOfGroupings;
+
+    auto blockSize = m_header->factsSize / threadCount;
+    auto start = 0;
+    auto end = 0;
+    for (auto i = 0; i < threadCount; i++) {
+        start = end;
+        auto amount = blockSize;
+        if (i == threadCount - 1) {
+            if (m_header->factsSize % 2 != 0)
+            {
+                amount = blockSize + 1;
+                continue;
+            }
+        }
+        end = start + amount;
+
+        QList<Grouping> *lg = new QList<Grouping>();
+        listOfGroupings.append(lg);
+        synchronizer.addFuture(QtConcurrent::run(this, &Database::runQuery3,
+                                                 start,
+                                                 end,
+                                                 lg
+                                                 )
+                               );
+    }
+
+    synchronizer.waitForFinished();
+
+    // Show result
+    QList<Grouping> result;
+    for (auto i = 0; i < threadCount; i++) {
+        QList<Grouping> &groupingList = *(listOfGroupings[i]);
+        foreach (auto grouping, groupingList) {
+            auto found = false;
+            for (auto j = 0; j < result.length(); j++) {
+                Grouping &resultGrouping = result[j];
+                if (resultGrouping.category == grouping.category) {
+
+                    mergeSubGroupings(resultGrouping, grouping);
+
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                insertGrouping(grouping, result);
+            }
+        }
+    }
+
+    // Do top count
+    QList<Grouping> topCountResult;
+    auto topCount = 10;
+
+    auto previousMax = -1;
+    for (auto k = 0; k < topCount; k++) {
+        auto currentMax = -1;
+        auto maxGroupingIndex = -1;
+        auto maxSubGroupingIndex = -1;
+
+        Grouping grouping;
+
+        for (auto i = 0; i < result.length(); i++) {
+            auto grouping = result[i];
+            for (auto j = 0; j < grouping.subGroupings.length(); j++) {
+                auto subGrouping = grouping.subGroupings[j];
+                auto avg = subGrouping.avg();
+
+                if (previousMax > 0 && avg >= previousMax)
+                    continue;
+
+                if (avg > currentMax) {
+                    currentMax = avg;
+                    maxGroupingIndex = i;
+                    maxSubGroupingIndex = j;
+                }
+            }
+        }
+
+        if (maxGroupingIndex >= 0 && maxSubGroupingIndex >= 0) {
+            previousMax = currentMax;
+            grouping.category = result[maxGroupingIndex].category;
+            grouping.subGroupings.append(result[maxGroupingIndex].subGroupings[maxSubGroupingIndex]);
+            topCountResult.append(grouping);
+        }
+    }
+
+    foreach (auto grouping, topCountResult) {
+        foreach (auto subGroupong, grouping.subGroupings) {
+            Console::writeLine(QString("%1 %2 %3").arg(grouping.category).arg(subGroupong.category).arg(subGroupong.avg()));
+        }
+    }
+
+    foreach (auto lg, listOfGroupings) {
+        delete lg;
+    }
+}
+
+void Database::runQuery3(int start, int end, QList<Grouping> *groupings)
+{
+    // Create sub-category groupings
+    QList<Grouping> subGroupings;
+    for (auto i = 0; i < m_header->subCategoriesSize; i++) {
+        auto row = m_subCategories[i];
+
+        auto found = false;
+        for (auto j = 0; j < subGroupings.length(); j++) {
+            Grouping &subGrouping = subGroupings[j];
+            if (subGrouping.category == row.name) {
+                subGrouping.keys.append(row.id);
+                found = true;
+            }
+        }
+        if (!found) {
+            Grouping subGrouping;
+            subGrouping.category = row.name;
+            subGrouping.keys.append(row.id);
+            subGrouping.count = 0;
+            subGrouping.sum = 0;
+
+            insertGrouping(subGrouping, subGroupings);
+        }
+    }
+    for (auto j = 0; j < subGroupings.length(); j++) {
+        Grouping &subGrouping = subGroupings[j];
+        subGrouping.minKey = -1;
+        subGrouping.maxKey = -1;
+        foreach (auto key, subGrouping.keys) {
+            // Get min
+            if (subGrouping.minKey < 0) {
+                subGrouping.minKey = key;
+            }
+
+            if (key < subGrouping.minKey)
+                subGrouping.minKey = key;
+
+            // Get max
+            if (subGrouping.maxKey < 0) {
+                subGrouping.maxKey = key;
+            }
+
+            if (key > subGrouping.maxKey)
+                subGrouping.maxKey = key;
+        }
+    }
+
+    // Group by categories
+    for (auto i = 0; i < m_header->categoriesSize; i++) {
+        auto row = m_categories[i];
+
+        auto found = false;
+        for (auto j = 0; j < groupings->length(); j++) {
+            Grouping &grouping = (*groupings)[j];
+            if (grouping.category == row.name) {
+                grouping.keys.append(row.id);
+                found = true;
+            }
+        }
+        if (!found) {
+            Grouping grouping;
+            grouping.category = row.name;
+            grouping.keys.append(row.id);
+            grouping.count = 0;
+            grouping.sum = 0;
+            grouping.subGroupings = subGroupings;
+
+            insertGrouping(grouping, *groupings);
+        }
+    }
+    for (auto j = 0; j < groupings->length(); j++) {
+        Grouping &grouping = (*groupings)[j];
+        grouping.minKey = -1;
+        grouping.maxKey = -1;
+        foreach (auto key, grouping.keys) {
+            // Get min
+            if (grouping.minKey < 0) {
+                grouping.minKey = key;
+            }
+
+            if (key < grouping.minKey)
+                grouping.minKey = key;
+
+            // Get max
+            if (grouping.maxKey < 0) {
+                grouping.maxKey = key;
+            }
+
+            if (key > grouping.maxKey)
+                grouping.maxKey = key;
+        }
+    }
+
+    // Main cycle
+    for (auto i = start; i < end; i++) {
+        auto fact = m_facts[i];
+
+        CalendarRow date;
+        if (!findInCalendar(fact.timestamp, &date))
+            continue;
+
+        if (date.year != 2020)
+            continue;
+
+        for (auto j = 0; j < groupings->length(); j++) {
+            Grouping &grouping = (*groupings)[j];
+
+            if (fact.id_category < grouping.minKey ||
+                fact.id_category > grouping.maxKey)
+                continue;
+
+            auto found = false;
+            foreach (auto key, grouping.keys) {
+                if (key == fact.id_category) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                // Do grouping
+                for (auto k = 0; k < grouping.subGroupings.length(); k++) {
+                    Grouping &subGrouping = grouping.subGroupings[k];
+
+                    if (fact.id_subCategory < subGrouping.minKey ||
+                        fact.id_subCategory > subGrouping.maxKey)
+                        continue;
+
+                    auto foundSubGrouping = false;
+                    foreach (auto subkey, subGrouping.keys) {
+                        if (subkey == fact.id_subCategory) {
+                            foundSubGrouping = true;
+                            break;
+                        }
+                    }
+
+                    if (foundSubGrouping) {
+                        // Do grouping
+                        subGrouping.sum += fact.totalPrice;
+                        subGrouping.count++;
+                        break;
+                    }
+                }
+//                grouping.sum += fact.totalPrice;
+//                grouping.count++;
+                break;
+            }
+        }
+    }
 }
 
 void Database::print()
@@ -661,7 +784,29 @@ void Database::insertGrouping(const Grouping &grouping, QList<Grouping> &groupin
         groupings.append(grouping);
 }
 
-bool Database::findInCalendar(qint64 timestamp, CalendarRow *result, int start, int end)
+void Database::mergeSubGroupings(Grouping &result, const Grouping &grouping)
+{
+    // Show result
+    foreach (auto subGroup, grouping.subGroupings) {
+        auto found = false;
+        for (auto j = 0; j < result.subGroupings.length(); j++) {
+            Grouping &resultSubGrouping = result.subGroupings[j];
+            if (resultSubGrouping.category == subGroup.category) {
+
+                resultSubGrouping.count += subGroup.count;
+                resultSubGrouping.sum += subGroup.sum;
+
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            insertGrouping(subGroup, result.subGroupings);
+        }
+    }
+}
+
+bool Database::findInCalendar(qint64 timestamp, CalendarRow *result)
 {
     CalendarRow key;
     key.timestamp = timestamp;
@@ -681,7 +826,13 @@ bool Database::findInCalendar(qint64 timestamp, CalendarRow *result, int start, 
 
 int Database::compareDates(const void *a, const void *b)
 {
-    return ((CalendarRow *) a)->timestamp - ((CalendarRow *) b)->timestamp;
+    CalendarRow *row1 = (CalendarRow *) a;
+    CalendarRow *row2 = (CalendarRow *) b;
+    if (row1->timestamp > row2->timestamp)
+        return 1;
+    if (row1->timestamp < row2->timestamp)
+        return -1;
+    return 0;
 }
 
 QString Database::randomString(int length)

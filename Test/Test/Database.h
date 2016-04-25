@@ -34,6 +34,7 @@ struct Grouping {
     qint64 maxKey;
     double sum;
     qint64 count;
+    QList<Grouping> subGroupings;
     double avg() { return count != 0 ? sum / count : 0; }
 };
 
@@ -62,7 +63,8 @@ private:
     void runQuery3(int start, int end, QList<Grouping> *groupings);
     void insertGrouping(const CalendarGrouping &grouping, QList<CalendarGrouping> &groupings);
     void insertGrouping(const Grouping &grouping, QList<Grouping> &groupings);
-    bool findInCalendar(qint64 timestamp, CalendarRow *result, int start = -1, int end = -1);
+    void mergeSubGroupings(Grouping &result, const Grouping &grouping);
+    bool findInCalendar(qint64 timestamp, CalendarRow *result);
     static int compareDates(const void *a, const void *b);
 
     QString randomString(int maxSize);
