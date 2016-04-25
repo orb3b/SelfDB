@@ -13,6 +13,9 @@ public:
     CalendarRow next();
 
 private:
+    QString monthToString(int month) const;
+    QString dayOfWeekToString(int dayOfWeek) const;
+
     QDate m_from;
     QDate m_to;
     QDate m_current;

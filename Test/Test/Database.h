@@ -18,7 +18,8 @@ struct Header {
 
 struct CalendarGrouping {
     int year;
-    int month;
+    int monthNumber;
+    QString month;
     QList<qint64> timestamps;
     qint64 minTimestamp;
     qint64 maxTimestamp;

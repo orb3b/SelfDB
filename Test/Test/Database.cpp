@@ -124,7 +124,7 @@ void Database::query2()
     }
 
     foreach (auto grouping, result) {
-        Console::writeLine(QString("%1 %2 %3").arg(grouping.year).arg(grouping.month).arg(grouping.avg()));
+        Console::writeLine(QString("%1 | %2 : %3").arg(grouping.year).arg(grouping.month).arg(grouping.avg()));
     }
 }
 
@@ -146,6 +146,7 @@ void Database::runQuery2(int start, int end, QList<CalendarGrouping> *groupings)
         if (!found) {
             CalendarGrouping grouping;
             grouping.month = row.month;
+            grouping.monthNumber = row.monthNumber;
             grouping.year = row.year;
             grouping.timestamps.append(row.timestamp);
             grouping.count = 0;
@@ -264,14 +265,14 @@ void Database::query3()
     }
 
     // Do top count
-    QList<Grouping> topCountResult;
-    auto topCount = 10;
+    QList<Grouping> bottomCountResult;
+    auto bottomCount = 10;
 
-    auto previousMax = -1;
-    for (auto k = 0; k < topCount; k++) {
-        auto currentMax = -1;
-        auto maxGroupingIndex = -1;
-        auto maxSubGroupingIndex = -1;
+    double previousMin = -1;
+    for (auto k = 0; k < bottomCount; k++) {
+        double currentMin = -1;
+        auto minGroupingIndex = -1;
+        auto minSubGroupingIndex = -1;
 
         Grouping grouping;
 
@@ -281,28 +282,28 @@ void Database::query3()
                 auto subGrouping = grouping.subGroupings[j];
                 auto avg = subGrouping.avg();
 
-                if (previousMax > 0 && avg >= previousMax)
+                if (previousMin >= 0 && avg <= previousMin)
                     continue;
 
-                if (avg > currentMax) {
-                    currentMax = avg;
-                    maxGroupingIndex = i;
-                    maxSubGroupingIndex = j;
+                if (currentMin < 0 || avg < currentMin) {
+                    currentMin = avg;
+                    minGroupingIndex = i;
+                    minSubGroupingIndex = j;
                 }
             }
         }
 
-        if (maxGroupingIndex >= 0 && maxSubGroupingIndex >= 0) {
-            previousMax = currentMax;
-            grouping.category = result[maxGroupingIndex].category;
-            grouping.subGroupings.append(result[maxGroupingIndex].subGroupings[maxSubGroupingIndex]);
-            topCountResult.append(grouping);
+        if (minGroupingIndex >= 0 && minSubGroupingIndex >= 0) {
+            previousMin = currentMin;
+            grouping.category = result[minGroupingIndex].category;
+            grouping.subGroupings.append(result[minGroupingIndex].subGroupings[minSubGroupingIndex]);
+            bottomCountResult.append(grouping);
         }
     }
 
-    foreach (auto grouping, topCountResult) {
+    foreach (auto grouping, bottomCountResult) {
         foreach (auto subGroupong, grouping.subGroupings) {
-            Console::writeLine(QString("%1 %2 %3").arg(grouping.category).arg(subGroupong.category).arg(subGroupong.avg()));
+            Console::writeLine(QString("%1 | %2 : %3").arg(grouping.category).arg(subGroupong.category).arg(subGroupong.avg()));
         }
     }
 
@@ -749,7 +750,7 @@ void Database::insertGrouping(const CalendarGrouping &grouping, QList<CalendarGr
             inserted = true;
         } else {
             // Equal by year
-            if (grouping.month > groupings[j].month) {
+            if (grouping.monthNumber > groupings[j].monthNumber) {
                 continue;
             } else {
                 groupings.insert(j, grouping);

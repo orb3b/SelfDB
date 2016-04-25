@@ -4,10 +4,17 @@
 #include <QtGlobal>
 
 struct CalendarRow {
-    uint day;
-    uint month;
-    uint year;
     qint64 timestamp;
+    uint year;
+    uint halfyear;
+    uint quater;
+    uint monthNumber;
+    char month[40];
+    uint weekNumber;
+    char weekDay[40];
+    uint dayNumber;
+    uint day;
+    char daysTime[40];
 };
 
 struct CategoryRow {
